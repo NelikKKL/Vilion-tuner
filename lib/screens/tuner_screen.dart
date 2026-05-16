@@ -27,7 +27,6 @@ class _TunerScreenState extends State<TunerScreen>
 
   @override
   void dispose() {
-    // Don't stop listening — screen is kept alive in IndexedStack
     super.dispose();
   }
 
@@ -157,31 +156,31 @@ class _TunerScreenState extends State<TunerScreen>
                     ),
                   ),
 
-                  // Bottom row: instrument + mic toggle + AUTO
+                  // Bottom row: Violin label | Mic button | AUTO toggle
                   Positioned(
                     bottom: 16,
                     left: 24,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         'Violin',
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w500,
-                          fontSize: 16,
+                          fontSize: 15,
                         ),
                       ),
                     ),
                   ),
 
-                  // Mic on/off button
+                  // Mic button — centered at bottom
                   Positioned(
-                    bottom: 16,
+                    bottom: 10,
                     left: 0,
                     right: 0,
                     child: Center(
@@ -193,49 +192,63 @@ class _TunerScreenState extends State<TunerScreen>
                             tuner.startListening();
                           }
                         },
-                        child: Container(
-                          width: 52,
-                          height: 52,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 56,
+                          height: 56,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: tuner.isListening
                                 ? colorScheme.primary
                                 : colorScheme.surfaceContainerHighest,
+                            boxShadow: tuner.isListening
+                                ? [
+                                    BoxShadow(
+                                      color: colorScheme.primary.withOpacity(0.4),
+                                      blurRadius: 12,
+                                      spreadRadius: 2,
+                                    )
+                                  ]
+                                : [],
                           ),
                           child: Icon(
                             tuner.isListening ? Icons.mic : Icons.mic_off,
                             color: tuner.isListening
                                 ? colorScheme.onPrimary
                                 : colorScheme.onSurfaceVariant,
+                            size: 24,
                           ),
                         ),
                       ),
                     ),
                   ),
 
+                  // AUTO button — right side
                   Positioned(
                     bottom: 16,
                     right: 24,
                     child: GestureDetector(
                       onTap: () => tuner.setAutoMode(!tuner.autoMode),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: tuner.autoMode,
-                            onChanged: (v) => tuner.setAutoMode(v ?? true),
-                            activeColor: colorScheme.primary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4)),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: tuner.autoMode
+                              ? colorScheme.primary
+                              : colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'AUTO',
+                          style: TextStyle(
+                            color: tuner.autoMode
+                                ? colorScheme.onPrimary
+                                : colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
-                          Text(
-                            'AUTO',
-                            style: TextStyle(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

@@ -2,6 +2,61 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+enum MetronomeSound {
+  woodBlock,
+  drum,
+  digital,
+  digital2,
+  clav,
+}
+
+extension MetronomeSoundExt on MetronomeSound {
+  String get label {
+    switch (this) {
+      case MetronomeSound.woodBlock:
+        return 'Wood Block';
+      case MetronomeSound.drum:
+        return 'Drum';
+      case MetronomeSound.digital:
+        return 'Digital';
+      case MetronomeSound.digital2:
+        return 'Digital 2';
+      case MetronomeSound.clav:
+        return 'Clav';
+    }
+  }
+
+  String get accentAsset {
+    switch (this) {
+      case MetronomeSound.woodBlock:
+        return 'sounds/click_accent.wav';
+      case MetronomeSound.drum:
+        return 'sounds/beat_drum_high.wav';
+      case MetronomeSound.digital:
+        return 'sounds/beat_digital_high.wav';
+      case MetronomeSound.digital2:
+        return 'sounds/beat_digital_2_high.wav';
+      case MetronomeSound.clav:
+        return 'sounds/beat_clav_high.wav';
+    }
+  }
+
+  String get clickAsset {
+    switch (this) {
+      case MetronomeSound.woodBlock:
+        return 'sounds/click_normal.wav';
+      case MetronomeSound.drum:
+        return 'sounds/beat_drum_high.wav';
+      case MetronomeSound.digital:
+        return 'sounds/beat_digital_high.wav';
+      case MetronomeSound.digital2:
+        return 'sounds/beat_digital_2_high.wav';
+      case MetronomeSound.clav:
+        return 'sounds/beat_clav_high.wav';
+    }
+  }
+}
+
 class MetronomeService extends ChangeNotifier {
   bool _isPlaying = false;
   int _bpm = 70;
@@ -11,9 +66,9 @@ class MetronomeService extends ChangeNotifier {
   bool _isAccent = false;
   NoteValue _noteValue = NoteValue.quarter;
   bool _vibrate = true;
+  MetronomeSound _sound = MetronomeSound.woodBlock;
 
   Timer? _timer;
-  final List<DateTime> _tapTimes = [];
 
   // Two players: accent (beat 1) and regular click
   final AudioPlayer _accentPlayer = AudioPlayer();
@@ -40,9 +95,13 @@ class MetronomeService extends ChangeNotifier {
   Future<void> _initAudio() async {
     await _accentPlayer.setReleaseMode(ReleaseMode.stop);
     await _clickPlayer.setReleaseMode(ReleaseMode.stop);
-    // Pre-load sounds from assets
-    await _accentPlayer.setSource(AssetSource('sounds/click_accent.wav'));
-    await _clickPlayer.setSource(AssetSource('sounds/click_normal.wav'));
+    await _loadSounds();
+  }
+
+  Future<void> _loadSounds() async {
+    _soundReady = false;
+    await _accentPlayer.setSource(AssetSource(_sound.accentAsset));
+    await _clickPlayer.setSource(AssetSource(_sound.clickAsset));
     _soundReady = true;
   }
 
@@ -54,6 +113,7 @@ class MetronomeService extends ChangeNotifier {
   bool get isAccent => _isAccent;
   NoteValue get noteValue => _noteValue;
   bool get vibrate => _vibrate;
+  MetronomeSound get sound => _sound;
 
   String get tempoName {
     for (final mark in tempoMarks) {
@@ -94,6 +154,12 @@ class MetronomeService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setSound(MetronomeSound s) async {
+    _sound = s;
+    await _loadSounds();
+    notifyListeners();
+  }
+
   void togglePlay() {
     if (_isPlaying) {
       _stopTimer();
@@ -108,28 +174,8 @@ class MetronomeService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void tap() {
-    final now = DateTime.now();
-    _tapTimes.add(now);
-    if (_tapTimes.length > 8) _tapTimes.removeAt(0);
-
-    if (_tapTimes.length >= 2) {
-      double totalMs = 0;
-      for (int i = 1; i < _tapTimes.length; i++) {
-        totalMs += _tapTimes[i]
-            .difference(_tapTimes[i - 1])
-            .inMilliseconds
-            .toDouble();
-      }
-      final avgMs = totalMs / (_tapTimes.length - 1);
-      setBpm((60000 / avgMs).round());
-    }
-    notifyListeners();
-  }
-
   void _startTimer() {
     final intervalMs = (60000 / _bpm).round();
-    // Fire immediately for first beat
     _tick();
     _timer = Timer.periodic(Duration(milliseconds: intervalMs), (_) => _tick());
   }

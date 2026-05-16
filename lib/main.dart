@@ -29,10 +29,38 @@ class ViolinTunerApp extends StatelessWidget {
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         return Consumer<ThemeProvider>(
           builder: (context, themeProvider, _) {
-            final lightScheme = lightDynamic?.harmonized() ??
-                AppTheme.defaultLightScheme;
-            final darkScheme = darkDynamic?.harmonized() ??
-                AppTheme.defaultDarkScheme;
+            // Dark grey scheme when Material You is disabled
+            const darkGreySeed = Color(0xFF2E2E2E);
+            final greyDarkScheme = ColorScheme.fromSeed(
+              seedColor: darkGreySeed,
+              brightness: Brightness.dark,
+            ).copyWith(
+              surface: const Color(0xFF1A1A1A),
+              surfaceContainerLow: const Color(0xFF222222),
+              surfaceContainerHighest: const Color(0xFF2E2E2E),
+              primary: const Color(0xFFAAAAAA),
+              onPrimary: const Color(0xFF1A1A1A),
+              secondary: const Color(0xFF888888),
+            );
+            final greyLightScheme = ColorScheme.fromSeed(
+              seedColor: darkGreySeed,
+              brightness: Brightness.light,
+            ).copyWith(
+              surface: const Color(0xFFF0F0F0),
+              surfaceContainerLow: const Color(0xFFE0E0E0),
+              surfaceContainerHighest: const Color(0xFFD0D0D0),
+            );
+
+            final ColorScheme lightScheme;
+            final ColorScheme darkScheme;
+
+            if (themeProvider.useMaterialYou) {
+              lightScheme = lightDynamic?.harmonized() ?? AppTheme.defaultLightScheme;
+              darkScheme = darkDynamic?.harmonized() ?? AppTheme.defaultDarkScheme;
+            } else {
+              lightScheme = greyLightScheme;
+              darkScheme = greyDarkScheme;
+            }
 
             return MaterialApp(
               title: 'Violin Tuner',
@@ -59,11 +87,18 @@ class ViolinTunerApp extends StatelessWidget {
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
+  bool _useMaterialYou = true;
 
   ThemeMode get themeMode => _themeMode;
+  bool get useMaterialYou => _useMaterialYou;
 
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
+    notifyListeners();
+  }
+
+  void setUseMaterialYou(bool value) {
+    _useMaterialYou = value;
     notifyListeners();
   }
 

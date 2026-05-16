@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../main.dart';
+import '../services/metronome_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -29,7 +30,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // Theme section
+              // Appearance
               _SectionHeader('Appearance', colorScheme),
               const SizedBox(height: 12),
 
@@ -56,9 +57,22 @@ class SettingsScreen extends StatelessWidget {
                   onSelectionChanged: (modes) {
                     themeProvider.setThemeMode(modes.first);
                   },
-                  style: ButtonStyle(
+                  style: const ButtonStyle(
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
+                ),
+              ),
+
+              _SettingsTile(
+                icon: Icons.palette_outlined,
+                title: 'Material You',
+                subtitle: themeProvider.useMaterialYou
+                    ? 'Dynamic colors from wallpaper'
+                    : 'Classic dark grey theme',
+                colorScheme: colorScheme,
+                trailing: Switch(
+                  value: themeProvider.useMaterialYou,
+                  onChanged: (v) => themeProvider.setUseMaterialYou(v),
                 ),
               ),
 
@@ -79,14 +93,6 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 12),
 
               _SettingsTile(
-                icon: Icons.volume_up_outlined,
-                title: 'Click sound',
-                subtitle: 'Wood block',
-                colorScheme: colorScheme,
-                onTap: () {},
-              ),
-
-              _SettingsTile(
                 icon: Icons.vibration,
                 title: 'Vibrate on beat',
                 colorScheme: colorScheme,
@@ -98,7 +104,7 @@ class SettingsScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // App icon + version footer
+              // Footer
               Center(
                 child: Column(
                   children: [
@@ -109,10 +115,11 @@ class SettingsScreen extends StatelessWidget {
                         color: const Color(0xFF2D2D2D),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Center(
-                        child: _ViolinIcon(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Image.asset(
+                          'assets/images/icon_violin_head.png',
                           color: const Color(0xFFDCE0E8),
-                          size: 44,
                         ),
                       ),
                     ),
@@ -143,61 +150,6 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ViolinIcon extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _ViolinIcon({required this.color, this.size = 24});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _ViolinIconPainter(color: color),
-    );
-  }
-}
-
-class _ViolinIconPainter extends CustomPainter {
-  final Color color;
-  const _ViolinIconPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..style = PaintingStyle.fill;
-    final s = size.width / 24.0;
-
-    final neckPath = Path();
-    neckPath.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(10.5 * s, 1 * s, 3 * s, 10 * s),
-      Radius.circular(1.5 * s),
-    ));
-    canvas.drawPath(neckPath, paint);
-
-    canvas.drawOval(Rect.fromCenter(
-      center: Offset(12 * s, 13 * s),
-      width: 7 * s,
-      height: 6 * s,
-    ), paint);
-
-    canvas.drawRect(Rect.fromLTWH(9 * s, 15 * s, 6 * s, 3 * s), paint);
-
-    canvas.drawOval(Rect.fromCenter(
-      center: Offset(12 * s, 20 * s),
-      width: 8.5 * s,
-      height: 7 * s,
-    ), paint);
-
-    canvas.drawOval(Rect.fromCenter(
-      center: Offset(12 * s, 1.5 * s),
-      width: 3 * s,
-      height: 2.5 * s,
-    ), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ViolinIconPainter old) => old.color != color;
 }
 
 class _SectionHeader extends StatelessWidget {

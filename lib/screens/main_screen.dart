@@ -39,13 +39,33 @@ class _MainScreenState extends State<MainScreen> {
         surfaceTintColor: colorScheme.surfaceTint,
         destinations: [
           NavigationDestination(
-            icon: _ViolinIcon(color: colorScheme.onSurfaceVariant),
-            selectedIcon: _ViolinIcon(color: colorScheme.onSecondaryContainer),
+            icon: Image.asset(
+              'assets/images/icon_violin_head.png',
+              width: 24,
+              height: 24,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            selectedIcon: Image.asset(
+              'assets/images/icon_violin_head.png',
+              width: 24,
+              height: 24,
+              color: colorScheme.onSecondaryContainer,
+            ),
             label: 'Tuner',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.av_timer_outlined),
-            selectedIcon: Icon(Icons.av_timer),
+          NavigationDestination(
+            icon: Image.asset(
+              'assets/images/icon_tab_metronome.png',
+              width: 24,
+              height: 24,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            selectedIcon: Image.asset(
+              'assets/images/icon_tab_metronome.png',
+              width: 24,
+              height: 24,
+              color: colorScheme.onSecondaryContainer,
+            ),
             label: 'Metronome',
           ),
           const NavigationDestination(
@@ -53,73 +73,23 @@ class _MainScreenState extends State<MainScreen> {
             selectedIcon: Icon(Icons.piano),
             label: 'Chromatic',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+          NavigationDestination(
+            icon: Image.asset(
+              'assets/images/icon_tab_setting.png',
+              width: 24,
+              height: 24,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            selectedIcon: Image.asset(
+              'assets/images/icon_tab_setting.png',
+              width: 24,
+              height: 24,
+              color: colorScheme.onSecondaryContainer,
+            ),
             label: 'Settings',
           ),
         ],
       ),
     );
   }
-}
-
-/// Custom violin icon matching the app icon aesthetic
-class _ViolinIcon extends StatelessWidget {
-  final Color color;
-  const _ViolinIcon({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(24, 24),
-      painter: _ViolinIconPainter(color: color),
-    );
-  }
-}
-
-class _ViolinIconPainter extends CustomPainter {
-  final Color color;
-  const _ViolinIconPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..style = PaintingStyle.fill;
-    final s = size.width / 24.0;
-
-    // Neck
-    final neckPath = Path();
-    neckPath.addRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(10.5 * s, 1 * s, 3 * s, 10 * s),
-      Radius.circular(1.5 * s),
-    ));
-    canvas.drawPath(neckPath, paint);
-
-    // Upper bout
-    canvas.drawOval(Rect.fromCenter(
-      center: Offset(12 * s, 13 * s),
-      width: 7 * s,
-      height: 6 * s,
-    ), paint);
-
-    // Waist fill
-    canvas.drawRect(Rect.fromLTWH(9 * s, 15 * s, 6 * s, 3 * s), paint);
-
-    // Lower bout
-    canvas.drawOval(Rect.fromCenter(
-      center: Offset(12 * s, 20 * s),
-      width: 8.5 * s,
-      height: 7 * s,
-    ), paint);
-
-    // Scroll
-    canvas.drawOval(Rect.fromCenter(
-      center: Offset(12 * s, 1.5 * s),
-      width: 3 * s,
-      height: 2.5 * s,
-    ), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ViolinIconPainter old) => old.color != color;
 }

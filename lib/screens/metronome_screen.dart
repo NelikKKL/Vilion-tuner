@@ -19,7 +19,7 @@ class MetronomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 24),
 
-            // Beat indicators (top section like the screenshots)
+            // Beat indicators
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
@@ -42,22 +42,15 @@ class MetronomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Volume + TAP row
+            // Volume (sound picker) button — only volume icon, no TAP
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  // Volume button
                   _RoundButton(
                     icon: Icons.volume_up_outlined,
-                    onTap: () {},
-                    colorScheme: colorScheme,
-                  ),
-                  // TAP button
-                  _RoundButton(
-                    label: 'TAP',
-                    onTap: metro.tap,
+                    onTap: () => _showSoundPicker(context, metro),
                     colorScheme: colorScheme,
                   ),
                 ],
@@ -151,6 +144,73 @@ class MetronomeScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
+    );
+  }
+
+  void _showSoundPicker(BuildContext context, MetronomeService metro) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surfaceContainerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return Consumer<MetronomeService>(
+          builder: (context, metro, _) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Metronome Sound',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...MetronomeSound.values.map((s) {
+                    final selected = metro.sound == s;
+                    return ListTile(
+                      leading: Icon(
+                        Icons.music_note,
+                        color: selected
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(
+                        s.label,
+                        style: TextStyle(
+                          color: selected
+                              ? colorScheme.primary
+                              : colorScheme.onSurface,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: selected
+                          ? Icon(Icons.check, color: colorScheme.primary)
+                          : null,
+                      onTap: () {
+                        metro.setSound(s);
+                        Navigator.of(ctx).pop();
+                      },
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -265,7 +325,6 @@ class _TimeSignaturePicker extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Numerator picker
               _NumberPicker(
                 value: metro.beatsPerMeasure,
                 min: 1,
@@ -285,7 +344,6 @@ class _TimeSignaturePicker extends StatelessWidget {
                   ),
                 ),
               ),
-              // Denominator picker
               _NumberPicker(
                 value: metro.beatUnit,
                 min: 2,
