@@ -26,11 +26,6 @@ class _TunerScreenState extends State<TunerScreen>
   }
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     super.build(context);
     final tuner = context.watch<TunerService>();
@@ -46,25 +41,20 @@ class _TunerScreenState extends State<TunerScreen>
               Material(
                 color: colorScheme.errorContainer,
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
                       Icon(Icons.error_outline,
                           color: colorScheme.onErrorContainer, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          tuner.error,
-                          style:
-                              TextStyle(color: colorScheme.onErrorContainer),
-                        ),
+                        child: Text(tuner.error,
+                            style: TextStyle(color: colorScheme.onErrorContainer)),
                       ),
                       TextButton(
                         onPressed: tuner.startListening,
                         child: Text('Retry',
-                            style:
-                                TextStyle(color: colorScheme.onErrorContainer)),
+                            style: TextStyle(color: colorScheme.onErrorContainer)),
                       ),
                     ],
                   ),
@@ -81,175 +71,159 @@ class _TunerScreenState extends State<TunerScreen>
               ),
             ),
 
-            Container(
-              height: 1,
-              color: colorScheme.outlineVariant.withOpacity(0.3),
-            ),
+            Container(height: 1, color: colorScheme.outlineVariant.withOpacity(0.3)),
 
-            // ── Violin scroll + string buttons ────────────────────────────
+            // ── Violin image + string buttons + bottom controls ───────────
             Expanded(
-              flex: 5,
-              child: Stack(
-                alignment: Alignment.center,
+              flex: 6,
+              child: Column(
                 children: [
-                  const ViolinScrollWidget(),
-
-                  // Left strings: D4, G3
-                  Positioned(
-                    left: 24,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                  // String buttons row (верхний ряд над картинкой)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        StringButton(
-                          label: 'D₄',
-                          isSelected:
-                              tuner.selectedString == TunerString.d4,
-                          onTap: () => tuner.selectString(
-                            tuner.selectedString == TunerString.d4
-                                ? null
-                                : TunerString.d4,
+                        // Left: D4, G3
+                        Column(
+                          children: [
+                            StringButton(
+                              label: 'D₄',
+                              isSelected: tuner.selectedString == TunerString.d4,
+                              onTap: () => tuner.selectString(
+                                tuner.selectedString == TunerString.d4 ? null : TunerString.d4,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            StringButton(
+                              label: 'G₃',
+                              isSelected: tuner.selectedString == TunerString.g3,
+                              onTap: () => tuner.selectString(
+                                tuner.selectedString == TunerString.g3 ? null : TunerString.g3,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Center: violin head image
+                        Expanded(
+                          child: Center(
+                            child: const ViolinScrollWidget(),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        StringButton(
-                          label: 'G₃',
-                          isSelected:
-                              tuner.selectedString == TunerString.g3,
-                          onTap: () => tuner.selectString(
-                            tuner.selectedString == TunerString.g3
-                                ? null
-                                : TunerString.g3,
-                          ),
+
+                        // Right: A4, E5
+                        Column(
+                          children: [
+                            StringButton(
+                              label: 'A₄',
+                              isSelected: tuner.selectedString == TunerString.a4,
+                              onTap: () => tuner.selectString(
+                                tuner.selectedString == TunerString.a4 ? null : TunerString.a4,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            StringButton(
+                              label: 'E₅',
+                              isSelected: tuner.selectedString == TunerString.e5,
+                              onTap: () => tuner.selectString(
+                                tuner.selectedString == TunerString.e5 ? null : TunerString.e5,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
 
-                  // Right strings: A4, E5
-                  Positioned(
-                    right: 24,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                  const Spacer(),
+
+                  // Bottom: mic button (left) + AUTO button (right)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        StringButton(
-                          label: 'A₄',
-                          isSelected:
-                              tuner.selectedString == TunerString.a4,
-                          onTap: () => tuner.selectString(
-                            tuner.selectedString == TunerString.a4
-                                ? null
-                                : TunerString.a4,
+                        // Mic button
+                        GestureDetector(
+                          onTap: () {
+                            if (tuner.isListening) {
+                              tuner.stopListening();
+                            } else {
+                              tuner.startListening();
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: tuner.isListening
+                                  ? colorScheme.primary
+                                  : Color.alphaBlend(
+                                      Colors.white.withOpacity(0.08),
+                                      colorScheme.surface,
+                                    ),
+                              boxShadow: tuner.isListening
+                                  ? [
+                                      BoxShadow(
+                                        color: colorScheme.primary.withOpacity(0.45),
+                                        blurRadius: 16,
+                                        spreadRadius: 2,
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                            child: Icon(
+                              tuner.isListening ? Icons.mic : Icons.mic_off,
+                              color: tuner.isListening
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurface.withOpacity(0.6),
+                              size: 24,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        StringButton(
-                          label: 'E₅',
-                          isSelected:
-                              tuner.selectedString == TunerString.e5,
-                          onTap: () => tuner.selectString(
-                            tuner.selectedString == TunerString.e5
-                                ? null
-                                : TunerString.e5,
+
+                        // AUTO button
+                        GestureDetector(
+                          onTap: () => tuner.setAutoMode(!tuner.autoMode),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: tuner.autoMode
+                                  ? colorScheme.primary
+                                  : Color.alphaBlend(
+                                      Colors.white.withOpacity(0.08),
+                                      colorScheme.surface,
+                                    ),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: tuner.autoMode
+                                  ? [
+                                      BoxShadow(
+                                        color: colorScheme.primary.withOpacity(0.35),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                            child: Text(
+                              'AUTO',
+                              style: TextStyle(
+                                color: tuner.autoMode
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.onSurface.withOpacity(0.6),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                                letterSpacing: 1,
+                              ),
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                  ),
-
-                  // Bottom row: Violin label | Mic button | AUTO toggle
-                  Positioned(
-                    bottom: 16,
-                    left: 24,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Violin',
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Mic button — centered at bottom
-                  Positioned(
-                    bottom: 10,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: () {
-                          if (tuner.isListening) {
-                            tuner.stopListening();
-                          } else {
-                            tuner.startListening();
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: tuner.isListening
-                                ? colorScheme.primary
-                                : colorScheme.surfaceContainerHighest,
-                            boxShadow: tuner.isListening
-                                ? [
-                                    BoxShadow(
-                                      color: colorScheme.primary.withOpacity(0.4),
-                                      blurRadius: 12,
-                                      spreadRadius: 2,
-                                    )
-                                  ]
-                                : [],
-                          ),
-                          child: Icon(
-                            tuner.isListening ? Icons.mic : Icons.mic_off,
-                            color: tuner.isListening
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurfaceVariant,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // AUTO button — right side
-                  Positioned(
-                    bottom: 16,
-                    right: 24,
-                    child: GestureDetector(
-                      onTap: () => tuner.setAutoMode(!tuner.autoMode),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: tuner.autoMode
-                              ? colorScheme.primary
-                              : colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'AUTO',
-                          style: TextStyle(
-                            color: tuner.autoMode
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
                     ),
                   ),
                 ],

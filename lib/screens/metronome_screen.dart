@@ -12,6 +12,13 @@ class MetronomeScreen extends StatelessWidget {
     final metro = context.watch<MetronomeService>();
     final colorScheme = Theme.of(context).colorScheme;
 
+    // Явный фоновый цвет кнопок чтобы не пропадали при любой теме
+    final buttonBg = Color.alphaBlend(
+      Colors.white.withOpacity(0.08),
+      colorScheme.surface,
+    );
+    final buttonFg = colorScheme.onSurface;
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
@@ -25,7 +32,7 @@ class MetronomeScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  metro.beatsPerMeasure.clamp(1, 6),
+                  metro.beatsPerMeasure.clamp(1, 8),
                   (i) => Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: BeatIndicator(
@@ -40,24 +47,37 @@ class MetronomeScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Volume (sound picker) button — only volume icon, no TAP
+            // Volume (sound picker) button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  _RoundButton(
-                    icon: Icons.volume_up_outlined,
+                  GestureDetector(
                     onTap: () => _showSoundPicker(context, metro),
-                    colorScheme: colorScheme,
+                    child: Container(
+                      width: 80,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: buttonBg,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.08),
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(Icons.volume_up_outlined, color: buttonFg),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
             // BPM Dial
             Expanded(
@@ -76,36 +96,81 @@ class MetronomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Time signature
-                  _BottomButton(
-                    label: metro.timeSignature,
+                  GestureDetector(
                     onTap: () => _showTimeSignaturePicker(context, metro),
-                    colorScheme: colorScheme,
-                    fontSize: 18,
+                    child: Container(
+                      width: 80,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: buttonBg,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.08),
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          metro.timeSignature,
+                          style: TextStyle(
+                            color: buttonFg,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
 
-                  // Play/Stop button
+                  // Play/Stop
                   GestureDetector(
                     onTap: metro.togglePlay,
                     child: Container(
                       width: 120,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
+                        color: metro.isPlaying
+                            ? colorScheme.primary
+                            : buttonBg,
                         borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.08),
+                          width: 1,
+                        ),
                       ),
-                      child: Icon(
-                        metro.isPlaying ? Icons.stop : Icons.play_arrow,
-                        color: colorScheme.onSurface,
-                        size: 28,
+                      child: Center(
+                        child: Icon(
+                          metro.isPlaying ? Icons.stop : Icons.play_arrow,
+                          color: metro.isPlaying
+                              ? colorScheme.onPrimary
+                              : buttonFg,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ),
 
                   // Note value
-                  _BottomButton(
-                    icon: _noteIcon(metro.noteValue),
+                  GestureDetector(
                     onTap: () => _cycleNoteValue(metro),
-                    colorScheme: colorScheme,
+                    child: Container(
+                      width: 80,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: buttonBg,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.08),
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          _noteIcon(metro.noteValue),
+                          color: buttonFg,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -135,12 +200,15 @@ class MetronomeScreen extends StatelessWidget {
     metro.setNoteValue(values[(current + 1) % values.length]);
   }
 
-  void _showTimeSignaturePicker(
-      BuildContext context, MetronomeService metro) {
+  void _showTimeSignaturePicker(BuildContext context, MetronomeService metro) {
+    final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => _TimeSignaturePicker(metro: metro),
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      backgroundColor: Color.alphaBlend(
+        Colors.white.withOpacity(0.05),
+        colorScheme.surface,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -149,9 +217,13 @@ class MetronomeScreen extends StatelessWidget {
 
   void _showSoundPicker(BuildContext context, MetronomeService metro) {
     final colorScheme = Theme.of(context).colorScheme;
+    final sheetBg = Color.alphaBlend(
+      Colors.white.withOpacity(0.05),
+      colorScheme.surface,
+    );
     showModalBottomSheet(
       context: context,
-      backgroundColor: colorScheme.surfaceContainerLow,
+      backgroundColor: sheetBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -179,7 +251,7 @@ class MetronomeScreen extends StatelessWidget {
                         Icons.music_note,
                         color: selected
                             ? colorScheme.primary
-                            : colorScheme.onSurfaceVariant,
+                            : colorScheme.onSurface.withOpacity(0.6),
                       ),
                       title: Text(
                         s.label,
@@ -215,93 +287,8 @@ class MetronomeScreen extends StatelessWidget {
   }
 }
 
-class _RoundButton extends StatelessWidget {
-  final IconData? icon;
-  final String? label;
-  final VoidCallback onTap;
-  final ColorScheme colorScheme;
-
-  const _RoundButton({
-    this.icon,
-    this.label,
-    required this.onTap,
-    required this.colorScheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 80,
-        height: 48,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Center(
-          child: icon != null
-              ? Icon(icon, color: colorScheme.onSurface)
-              : Text(
-                  label!,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomButton extends StatelessWidget {
-  final String? label;
-  final IconData? icon;
-  final VoidCallback onTap;
-  final ColorScheme colorScheme;
-  final double fontSize;
-
-  const _BottomButton({
-    this.label,
-    this.icon,
-    required this.onTap,
-    required this.colorScheme,
-    this.fontSize = 16,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 80,
-        height: 56,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Center(
-          child: icon != null
-              ? Icon(icon, color: colorScheme.onSurface)
-              : Text(
-                  label!,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                    fontSize: fontSize,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TimeSignaturePicker extends StatelessWidget {
   final MetronomeService metro;
-
   const _TimeSignaturePicker({required this.metro});
 
   @override
@@ -329,9 +316,7 @@ class _TimeSignaturePicker extends StatelessWidget {
                 value: metro.beatsPerMeasure,
                 min: 1,
                 max: 12,
-                onChanged: (v) {
-                  metro.setBeatsPerMeasure(v);
-                },
+                onChanged: metro.setBeatsPerMeasure,
                 colorScheme: colorScheme,
               ),
               Padding(
@@ -381,9 +366,7 @@ class _NumberPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final values = <int>[];
-    for (int i = min; i <= max; i += step) {
-      values.add(i);
-    }
+    for (int i = min; i <= max; i += step) values.add(i);
 
     return SizedBox(
       width: 64,
@@ -403,7 +386,7 @@ class _NumberPicker extends StatelessWidget {
                       fontSize: v == value ? 28 : 22,
                       color: v == value
                           ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
+                          : colorScheme.onSurface.withOpacity(0.4),
                       fontWeight: v == value
                           ? FontWeight.bold
                           : FontWeight.normal,
