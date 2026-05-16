@@ -3,7 +3,7 @@ import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
@@ -26,11 +26,6 @@ class NoteResult {
 }
 
 // ── Isolate messages ──────────────────────────────────────────────────────────
-
-class _IsolateInit {
-  final SendPort replyPort;
-  const _IsolateInit(this.replyPort);
-}
 
 class _PitchRequest {
   final Uint8List pcmBytes;

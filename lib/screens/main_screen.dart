@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../main.dart';
 import 'tuner_screen.dart';
 import 'metronome_screen.dart';
 import 'chromatic_screen.dart';
@@ -106,12 +104,6 @@ class _ViolinIconPainter extends CustomPainter {
 
     // Waist fill
     canvas.drawRect(Rect.fromLTWH(9 * s, 15 * s, 6 * s, 3 * s), paint);
-
-    // C-bout cutouts
-    final cutPaint = Paint()
-      ..color = color.withAlpha(0)
-      ..blendMode = BlendMode.clear
-      ..style = PaintingStyle.fill;
 
     // Lower bout
     canvas.drawOval(Rect.fromCenter(
