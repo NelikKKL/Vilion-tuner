@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/main_screen.dart';
 import 'services/metronome_service.dart';
@@ -92,22 +93,37 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   bool get useMaterialYou => _useMaterialYou;
 
-  void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
+  ThemeProvider() {
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final modeIndex = prefs.getInt('themeMode') ?? 0; // 0=system,1=light,2=dark
+    _themeMode = ThemeMode.values[modeIndex.clamp(0, 2)];
+    _useMaterialYou = prefs.getBool('useMaterialYou') ?? true;
     notifyListeners();
   }
 
-  void setUseMaterialYou(bool value) {
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('themeMode', mode.index);
+  }
+
+  Future<void> setUseMaterialYou(bool value) async {
     _useMaterialYou = value;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('useMaterialYou', value);
   }
 
   void toggleTheme() {
     if (_themeMode == ThemeMode.dark) {
-      _themeMode = ThemeMode.light;
+      setThemeMode(ThemeMode.light);
     } else {
-      _themeMode = ThemeMode.dark;
+      setThemeMode(ThemeMode.dark);
     }
-    notifyListeners();
   }
 }

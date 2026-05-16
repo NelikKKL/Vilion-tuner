@@ -32,11 +32,8 @@ class _BpmDialState extends State<BpmDial> {
     final angle = _getAngle(details.localPosition, size);
     if (_lastAngle != null) {
       double diff = angle - _lastAngle!;
-      // Wrap around
       if (diff > pi) diff -= 2 * pi;
       if (diff < -pi) diff += 2 * pi;
-
-      // Convert angle change to BPM change
       final bpmDelta = (diff * 30 / pi).round();
       if (bpmDelta != 0) {
         widget.onChanged((widget.bpm + bpmDelta).clamp(20, 300));
@@ -47,70 +44,63 @@ class _BpmDialState extends State<BpmDial> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Явные цвета для диска — работают и в светлой, и в тёмной теме
+    final ringColor = isDark
+        ? Color.alphaBlend(Colors.white.withOpacity(0.09), widget.colorScheme.surface)
+        : Color.alphaBlend(Colors.black.withOpacity(0.07), widget.colorScheme.surface);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final dialSize = min(size.width, size.height) * 0.75;
+        final dialSize = min(size.width, size.height) * 0.78;
 
         return GestureDetector(
-          onPanStart: (d) {
-            _lastAngle = _getAngle(d.localPosition, size);
-          },
+          onPanStart: (d) => _lastAngle = _getAngle(d.localPosition, size),
           onPanUpdate: (d) => _handlePanUpdate(d, size),
           onPanEnd: (_) => _lastAngle = null,
           child: Center(
             child: SizedBox(
               width: dialSize,
               height: dialSize,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer ring
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: widget.colorScheme.surfaceContainerHighest,
-                    ),
-                  ),
-
-                  // Indicator dot on the ring
-                  _DialDot(
-                    bpm: widget.bpm,
-                    dialSize: dialSize,
-                    colorScheme: widget.colorScheme,
-                  ),
-
-                  // Center content
-                  Column(
+              child: CustomPaint(
+                painter: _DialPainter(
+                  bpm: widget.bpm,
+                  ringColor: ringColor,
+                  dotColor: widget.colorScheme.primary,
+                ),
+                child: Center(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         widget.tempoName,
                         style: TextStyle(
-                          color: widget.colorScheme.onSurfaceVariant,
-                          fontSize: 16,
+                          color: widget.colorScheme.onSurface.withOpacity(0.55),
+                          fontSize: 15,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         '${widget.bpm}',
                         style: TextStyle(
                           color: widget.colorScheme.onSurface,
-                          fontSize: 64,
+                          fontSize: 62,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
                         'BPM',
                         style: TextStyle(
-                          color: widget.colorScheme.onSurfaceVariant,
-                          fontSize: 16,
-                          letterSpacing: 2,
+                          color: widget.colorScheme.onSurface.withOpacity(0.45),
+                          fontSize: 14,
+                          letterSpacing: 3,
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -120,36 +110,47 @@ class _BpmDialState extends State<BpmDial> {
   }
 }
 
-class _DialDot extends StatelessWidget {
+class _DialPainter extends CustomPainter {
   final int bpm;
-  final double dialSize;
-  final ColorScheme colorScheme;
+  final Color ringColor;
+  final Color dotColor;
 
-  const _DialDot({
+  _DialPainter({
     required this.bpm,
-    required this.dialSize,
-    required this.colorScheme,
+    required this.ringColor,
+    required this.dotColor,
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Map BPM 20-300 to angle 0-2pi
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Filled circle background
+    final bgPaint = Paint()
+      ..color = ringColor
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    // Dot position on ring edge
     final t = (bpm - 20) / (300 - 20);
     final angle = t * 2 * pi - pi / 2;
-    final radius = dialSize / 2 - 12;
-    final dx = cos(angle) * radius;
-    final dy = sin(angle) * radius;
+    final dotRadius = radius - 14;
+    final dotX = center.dx + cos(angle) * dotRadius;
+    final dotY = center.dy + sin(angle) * dotRadius;
 
-    return Transform.translate(
-      offset: Offset(dx, dy),
-      child: Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: colorScheme.primary,
-        ),
-      ),
-    );
+    // Dot glow
+    final glowPaint = Paint()
+      ..color = dotColor.withOpacity(0.25)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(Offset(dotX, dotY), 12, glowPaint);
+
+    // Dot
+    final dotPaint = Paint()..color = dotColor;
+    canvas.drawCircle(Offset(dotX, dotY), 9, dotPaint);
   }
+
+  @override
+  bool shouldRepaint(_DialPainter old) =>
+      old.bpm != bpm || old.ringColor != ringColor || old.dotColor != dotColor;
 }

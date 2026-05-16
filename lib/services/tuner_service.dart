@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'yin_pitch_detector.dart';
 
@@ -80,6 +81,12 @@ class TunerService extends ChangeNotifier {
   double _currentFrequency = 0.0;
   String _error = '';
 
+  // Reference pitch (A4) — default 440 Hz, user-configurable
+  double _referencePitch = 440.0;
+
+  // Per-string custom frequencies (overrides default when set)
+  Map<TunerString, double> _customStringFrequencies = {};
+
   final List<double> _freqHistory = [];
   static const _smoothing = 5;
 
@@ -118,6 +125,46 @@ class TunerService extends ChangeNotifier {
   TunerString? get selectedString => _selectedString;
   bool get autoMode => _autoMode;
   double get needlePosition => _needlePosition;
+  double get referencePitch => _referencePitch;
+  Map<TunerString, double> get customStringFrequencies => Map.unmodifiable(_customStringFrequencies);
+
+  TunerService() {
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _referencePitch = prefs.getDouble('referencePitch') ?? 440.0;
+    for (final s in TunerString.values) {
+      final key = 'stringFreq_${s.name}';
+      final val = prefs.getDouble(key);
+      if (val != null) _customStringFrequencies[s] = val;
+    }
+    notifyListeners();
+  }
+
+  Future<void> setReferencePitch(double hz) async {
+    _referencePitch = hz;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('referencePitch', hz);
+  }
+
+  Future<void> setStringFrequency(TunerString s, double hz) async {
+    _customStringFrequencies[s] = hz;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('stringFreq_${s.name}', hz);
+  }
+
+  double getEffectiveStringFrequency(TunerString s) {
+    if (_customStringFrequencies.containsKey(s)) {
+      return _customStringFrequencies[s]!;
+    }
+    // Scale default frequencies by ratio to A4=440
+    final ratio = _referencePitch / 440.0;
+    return stringFrequencies[s]! * ratio;
+  }
   double get currentFrequency => _currentFrequency;
   String get error => _error;
   String get stringLabel =>

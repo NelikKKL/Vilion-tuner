@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 
 enum MetronomeSound {
   woodBlock,
@@ -90,6 +92,13 @@ class MetronomeService extends ChangeNotifier {
 
   MetronomeService() {
     _initAudio();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _vibrate = prefs.getBool('metronome_vibrate') ?? false;
+    notifyListeners();
   }
 
   Future<void> _initAudio() async {
@@ -149,9 +158,11 @@ class MetronomeService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setVibrate(bool v) {
+  Future<void> setVibrate(bool v) async {
     _vibrate = v;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('metronome_vibrate', v);
   }
 
   Future<void> setSound(MetronomeSound s) async {
@@ -194,6 +205,10 @@ class MetronomeService extends ChangeNotifier {
       }
     }
 
+    if (_vibrate) {
+      Vibration.vibrate(duration: _isAccent ? 60 : 30, amplitude: _isAccent ? 200 : 100);
+    }
+
     notifyListeners();
   }
 
@@ -211,11 +226,35 @@ class MetronomeService extends ChangeNotifier {
   }
 }
 
-enum NoteValue { whole, half, quarter, eighth }
+enum NoteValue { whole, half, quarter, eighth, sixteenth, thirtySecond }
 
 class _TempoMark {
   final int min;
   final int max;
   final String name;
   const _TempoMark(this.min, this.max, this.name);
+}
+
+extension NoteValueExt on NoteValue {
+  String get label {
+    switch (this) {
+      case NoteValue.whole: return 'Whole';
+      case NoteValue.half: return 'Half';
+      case NoteValue.quarter: return 'Quarter';
+      case NoteValue.eighth: return 'Eighth';
+      case NoteValue.sixteenth: return 'Sixteenth';
+      case NoteValue.thirtySecond: return '32nd';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case NoteValue.whole: return '1 beat per measure';
+      case NoteValue.half: return '2 subdivisions';
+      case NoteValue.quarter: return '4 subdivisions';
+      case NoteValue.eighth: return '8 subdivisions';
+      case NoteValue.sixteenth: return '16 subdivisions';
+      case NoteValue.thirtySecond: return '32 subdivisions';
+    }
+  }
 }
