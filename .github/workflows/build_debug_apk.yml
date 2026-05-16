@@ -1,4 +1,4 @@
-name: 🎻 Build Debug APK
+name: 🎻 Build APK
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Flutter Debug APK
+    name: Flutter APK
     runs-on: ubuntu-latest
 
     steps:
@@ -38,14 +38,17 @@ jobs:
       - name: 🧪 Test
         run: flutter test
 
-      - name: 🔨 Build debug APK
-        run: flutter build apk --debug
+      - name: 🗑️ Remove invalid resource dirs
+        run: rm -rf android/app/src/main/res/mipmap-512
+
+      - name: 🔨 Build APK (arm64, release-signed-with-debug-key)
+        run: flutter build apk --release --target-platform android-arm64 --split-per-abi
 
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: violin-tuner-debug-${{ github.sha }}
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: violin-tuner-arm64-${{ github.sha }}
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 30
 
       - name: 💬 Comment on PR
@@ -58,10 +61,12 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: [
-                '## ✅ Debug APK ready!',
+                '## ✅ APK ready!',
                 '',
                 `📦 [Download APK](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
                 `🔖 Commit: \`${context.sha.substring(0, 7)}\``,
                 `🏗️ Build: #${context.runNumber}`,
+                '',
+                '> arm64-v8a release build (~20-35 MB)',
               ].join('\n')
             })
