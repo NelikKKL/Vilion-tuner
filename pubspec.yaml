@@ -1,0 +1,49 @@
+name: violin_tuner
+description: Violin Tuner & Metronome app with Material You support
+
+publish_to: 'none'
+
+version: 1.1.0+2
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Material You / Dynamic Colors
+  dynamic_color: ^1.7.0
+
+  # Microphone audio stream (raw PCM)
+  record: ^5.1.2
+
+  # Audio for metronome clicks
+  audioplayers: ^6.0.0
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # State management
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "icon_1024.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#2d2d2d"
+  adaptive_icon_foreground: "icon_1024.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sounds/
+    - icon_1024.png
