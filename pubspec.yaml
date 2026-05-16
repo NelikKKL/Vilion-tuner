@@ -13,8 +13,12 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Flutter 3.22 compatible version (1.8.x breaks with toARGB32)
   dynamic_color: ^1.7.0
-  record: ^5.1.2
+
+  # record 5.x — pin to avoid record_linux pulling in
+  record: 5.1.2
+
   audioplayers: ^6.0.0
   permission_handler: ^11.3.1
   provider: ^6.1.2
