@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/tuner_service.dart';
+import '../services/instrument_service.dart';
 import '../widgets/tuner_needle.dart';
 import '../widgets/violin_scroll_widget.dart';
 import '../widgets/string_button.dart';
@@ -25,17 +26,154 @@ class _TunerScreenState extends State<TunerScreen>
     });
   }
 
+  void _showInstrumentPicker(BuildContext context) {
+    final instrument = context.read<InstrumentService>();
+    final tuner = context.read<TunerService>();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Select Instrument',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...Instrument.values.map((inst) {
+                final selected = instrument.instrument == inst;
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? colorScheme.primaryContainer
+                          : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      inst.iconAsset,
+                      fit: BoxFit.contain,
+                      color: selected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  title: Text(
+                    inst.displayName,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: selected
+                      ? Icon(Icons.check_circle, color: colorScheme.primary)
+                      : null,
+                  onTap: () async {
+                    await instrument.setInstrument(inst);
+                    tuner.selectString(null); // reset to AUTO
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final tuner = context.watch<TunerService>();
+    final instrument = context.watch<InstrumentService>();
     final colorScheme = Theme.of(context).colorScheme;
+    final strings = instrument.strings;
+
+    // Split strings: left 2, right 2
+    final leftStrings  = strings.length >= 2 ? strings.sublist(0, 2) : strings;
+    final rightStrings = strings.length >= 4 ? strings.sublist(2, 4) : <InstrumentString>[];
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
+            // ── Instrument selector button ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: GestureDetector(
+                onTap: () => _showInstrumentPicker(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withOpacity(0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Image.asset(
+                          instrument.iconAsset,
+                          fit: BoxFit.contain,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        instrument.displayName,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.expand_more,
+                        size: 18,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // ── Error banner ──────────────────────────────────────────────
             if (tuner.error.isNotEmpty)
               Material(
@@ -73,63 +211,54 @@ class _TunerScreenState extends State<TunerScreen>
 
             Container(height: 1, color: colorScheme.outlineVariant.withOpacity(0.3)),
 
-            // ── Violin image + string buttons + bottom controls ───────────
+            // ── Instrument image + string buttons + bottom controls ────────
             Expanded(
               flex: 6,
               child: Column(
                 children: [
-                  // String buttons row (верхний ряд над картинкой)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Left: D4, G3
+                        // Left: first 2 strings
                         Column(
                           children: [
-                            StringButton(
-                              label: 'D₄',
-                              isSelected: tuner.selectedString == TunerString.d4,
-                              onTap: () => tuner.selectString(
-                                tuner.selectedString == TunerString.d4 ? null : TunerString.d4,
+                            for (int i = 0; i < leftStrings.length; i++) ...[
+                              if (i > 0) const SizedBox(height: 10),
+                              StringButton(
+                                label: leftStrings[i].label,
+                                isSelected: tuner.selectedStringId == leftStrings[i].id,
+                                onTap: () => tuner.selectString(
+                                  tuner.selectedStringId == leftStrings[i].id
+                                      ? null
+                                      : leftStrings[i].id,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            StringButton(
-                              label: 'G₃',
-                              isSelected: tuner.selectedString == TunerString.g3,
-                              onTap: () => tuner.selectString(
-                                tuner.selectedString == TunerString.g3 ? null : TunerString.g3,
-                              ),
-                            ),
+                            ],
                           ],
                         ),
 
-                        // Center: violin head image
-                        Expanded(
-                          child: Center(
-                            child: const ViolinScrollWidget(),
-                          ),
+                        // Center: instrument head image
+                        const Expanded(
+                          child: Center(child: ViolinScrollWidget()),
                         ),
 
-                        // Right: A4, E5
+                        // Right: last 2 strings
                         Column(
                           children: [
-                            StringButton(
-                              label: 'A₄',
-                              isSelected: tuner.selectedString == TunerString.a4,
-                              onTap: () => tuner.selectString(
-                                tuner.selectedString == TunerString.a4 ? null : TunerString.a4,
+                            for (int i = 0; i < rightStrings.length; i++) ...[
+                              if (i > 0) const SizedBox(height: 10),
+                              StringButton(
+                                label: rightStrings[i].label,
+                                isSelected: tuner.selectedStringId == rightStrings[i].id,
+                                onTap: () => tuner.selectString(
+                                  tuner.selectedStringId == rightStrings[i].id
+                                      ? null
+                                      : rightStrings[i].id,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            StringButton(
-                              label: 'E₅',
-                              isSelected: tuner.selectedString == TunerString.e5,
-                              onTap: () => tuner.selectString(
-                                tuner.selectedString == TunerString.e5 ? null : TunerString.e5,
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       ],
@@ -138,7 +267,7 @@ class _TunerScreenState extends State<TunerScreen>
 
                   const Spacer(),
 
-                  // Bottom: mic button (left) + AUTO button (right)
+                  // Bottom: mic button + AUTO button
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
                     child: Row(

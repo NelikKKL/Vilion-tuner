@@ -9,8 +9,7 @@ import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'yin_pitch_detector.dart';
-
-enum TunerString { g3, d4, a4, e5 }
+import 'instrument_service.dart';
 
 class NoteResult {
   final String noteName;
@@ -34,10 +33,9 @@ class _PitchRequest {
   const _PitchRequest(this.pcmBytes, this.replyPort);
 }
 
-/// Runs in a background isolate — no Flutter framework access allowed.
 void _pitchIsolateMain(SendPort mainSendPort) {
   final recv = ReceivePort();
-  mainSendPort.send(recv.sendPort); // handshake
+  mainSendPort.send(recv.sendPort);
 
   final detector = YinPitchDetector(
     sampleRate: 44100,
@@ -75,17 +73,14 @@ class TunerService extends ChangeNotifier {
   bool _isListening = false;
   bool _hasPermission = false;
   NoteResult? _currentNote;
-  TunerString? _selectedString;
+  String? _selectedStringId;   // id from InstrumentString
   bool _autoMode = true;
   double _needlePosition = 0.0;
   double _currentFrequency = 0.0;
   String _error = '';
 
-  // Reference pitch (A4) — default 440 Hz, user-configurable
   double _referencePitch = 440.0;
-
-  // Per-string custom frequencies (overrides default when set)
-  Map<TunerString, double> _customStringFrequencies = {};
+  Map<String, double> _customStringFrequencies = {};
 
   final List<double> _freqHistory = [];
   static const _smoothing = 5;
@@ -98,22 +93,6 @@ class TunerService extends ChangeNotifier {
   ReceivePort? _fromIsolate;
   bool _busy = false;
 
-  // ── Public API ──────────────────────────────────────────────────────────────
-
-  static const Map<TunerString, double> stringFrequencies = {
-    TunerString.g3: 196.00,
-    TunerString.d4: 293.66,
-    TunerString.a4: 440.00,
-    TunerString.e5: 659.25,
-  };
-
-  static const Map<TunerString, String> stringNames = {
-    TunerString.g3: 'G₃',
-    TunerString.d4: 'D₄',
-    TunerString.a4: 'A₄',
-    TunerString.e5: 'E₅',
-  };
-
   static const List<String> noteNames = [
     'C', 'C#', 'D', 'D#', 'E',
     'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
@@ -122,11 +101,13 @@ class TunerService extends ChangeNotifier {
   bool get isListening => _isListening;
   bool get hasPermission => _hasPermission;
   NoteResult? get currentNote => _currentNote;
-  TunerString? get selectedString => _selectedString;
+  String? get selectedStringId => _selectedStringId;
   bool get autoMode => _autoMode;
   double get needlePosition => _needlePosition;
   double get referencePitch => _referencePitch;
-  Map<TunerString, double> get customStringFrequencies => Map.unmodifiable(_customStringFrequencies);
+  double get currentFrequency => _currentFrequency;
+  String get error => _error;
+  Map<String, double> get customStringFrequencies => Map.unmodifiable(_customStringFrequencies);
 
   TunerService() {
     _loadPrefs();
@@ -135,10 +116,11 @@ class TunerService extends ChangeNotifier {
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     _referencePitch = prefs.getDouble('referencePitch') ?? 440.0;
-    for (final s in TunerString.values) {
-      final key = 'stringFreq_${s.name}';
+    final keys = prefs.getKeys().where((k) => k.startsWith('stringFreq_'));
+    for (final key in keys) {
+      final id = key.replaceFirst('stringFreq_', '');
       final val = prefs.getDouble(key);
-      if (val != null) _customStringFrequencies[s] = val;
+      if (val != null) _customStringFrequencies[id] = val;
     }
     notifyListeners();
   }
@@ -150,28 +132,23 @@ class TunerService extends ChangeNotifier {
     await prefs.setDouble('referencePitch', hz);
   }
 
-  Future<void> setStringFrequency(TunerString s, double hz) async {
-    _customStringFrequencies[s] = hz;
+  Future<void> setStringFrequency(String id, double hz) async {
+    _customStringFrequencies[id] = hz;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('stringFreq_${s.name}', hz);
+    await prefs.setDouble('stringFreq_$id', hz);
   }
 
-  double getEffectiveStringFrequency(TunerString s) {
-    if (_customStringFrequencies.containsKey(s)) {
-      return _customStringFrequencies[s]!;
+  double getEffectiveStringFrequency(InstrumentService instrument, String id) {
+    if (_customStringFrequencies.containsKey(id)) {
+      return _customStringFrequencies[id]!;
     }
-    // Scale default frequencies by ratio to A4=440
     final ratio = _referencePitch / 440.0;
-    return stringFrequencies[s]! * ratio;
+    final baseFreq = instrument.strings
+        .firstWhere((s) => s.id == id, orElse: () => instrument.strings.first)
+        .freq;
+    return baseFreq * ratio;
   }
-  double get currentFrequency => _currentFrequency;
-  String get error => _error;
-  String get stringLabel =>
-      (_autoMode || _selectedString == null) ? 'AUTO' : stringNames[_selectedString]!;
-
-  static String getStringName(TunerString s) => stringNames[s]!;
-  static double getStringFreq(TunerString s) => stringFrequencies[s]!;
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -219,13 +196,13 @@ class TunerService extends ChangeNotifier {
 
   void setAutoMode(bool auto) {
     _autoMode = auto;
-    if (auto) _selectedString = null;
+    if (auto) _selectedStringId = null;
     notifyListeners();
   }
 
-  void selectString(TunerString? string) {
-    _selectedString = string;
-    _autoMode = string == null;
+  void selectString(String? id) {
+    _selectedStringId = id;
+    _autoMode = id == null;
     notifyListeners();
   }
 
@@ -243,8 +220,6 @@ class TunerService extends ChangeNotifier {
       _pitchIsolateMain,
       _fromIsolate!.sendPort,
     );
-
-    // First message = isolate's SendPort (handshake)
     _toIsolate = await _fromIsolate!.first as SendPort;
   }
 
@@ -269,12 +244,11 @@ class TunerService extends ChangeNotifier {
     final stream = await _recorder.startStream(cfg);
 
     final List<int> accumulator = [];
-    const chunkSamples = 4096;         // ~93 ms @ 44100 Hz
-    const chunkBytes = chunkSamples * 2; // int16 → 2 bytes each
+    const chunkSamples = 4096;
+    const chunkBytes = chunkSamples * 2;
 
     _audioSub = stream.listen((data) {
       accumulator.addAll(data);
-
       while (accumulator.length >= chunkBytes) {
         final chunk = Uint8List.fromList(accumulator.sublist(0, chunkBytes));
         accumulator.removeRange(0, chunkBytes);
@@ -309,7 +283,6 @@ class TunerService extends ChangeNotifier {
       _currentFrequency = smoothed;
       _processFrequency(smoothed);
     } else {
-      // Silence — drift needle back to centre
       _needlePosition *= 0.75;
       if (_needlePosition.abs() < 0.01) _needlePosition = 0;
       notifyListeners();

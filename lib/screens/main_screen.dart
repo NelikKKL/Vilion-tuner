@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/instrument_service.dart';
 import 'tuner_screen.dart';
 import 'metronome_screen.dart';
 import 'chromatic_screen.dart';
@@ -24,6 +26,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final instrument = context.watch<InstrumentService>();
 
     return Scaffold(
       body: IndexedStack(
@@ -40,13 +43,13 @@ class _MainScreenState extends State<MainScreen> {
         destinations: [
           NavigationDestination(
             icon: Image.asset(
-              'assets/images/icon_violin_head.png',
+              instrument.iconAsset,
               width: 24,
               height: 24,
               color: colorScheme.onSurfaceVariant,
             ),
             selectedIcon: Image.asset(
-              'assets/images/icon_violin_head.png',
+              instrument.iconAsset,
               width: 24,
               height: 24,
               color: colorScheme.onSecondaryContainer,

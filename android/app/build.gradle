@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace "com.example.violin_tuner"
+    namespace "github.nelikkkl.com"
     compileSdk 35
     ndkVersion flutter.ndkVersion
 
@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.violin_tuner"
+        applicationId "github.nelikkkl.com"
         minSdk 23
         targetSdk 35
         versionCode 2

@@ -1,5 +1,5 @@
-name: violin_tuner
-description: Violin Tuner & Metronome app with Material You support
+name: tuner
+description: Tuner & Metronome app with Material You support
 
 publish_to: 'none'
 

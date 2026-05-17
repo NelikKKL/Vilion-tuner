@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../main.dart';
 import '../services/metronome_service.dart';
 import '../services/tuner_service.dart';
+import '../services/instrument_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -12,6 +13,7 @@ class SettingsScreen extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
     final metronome = context.watch<MetronomeService>();
     final tuner = context.watch<TunerService>();
+    final instrument = context.watch<InstrumentService>();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -33,7 +35,6 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // Appearance
               _SectionHeader('Appearance', colorScheme),
               const SizedBox(height: 12),
 
@@ -43,26 +44,13 @@ class SettingsScreen extends StatelessWidget {
                 colorScheme: colorScheme,
                 trailing: SegmentedButton<ThemeMode>(
                   segments: const [
-                    ButtonSegment(
-                      value: ThemeMode.light,
-                      icon: Icon(Icons.light_mode, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      icon: Icon(Icons.brightness_auto, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: ThemeMode.dark,
-                      icon: Icon(Icons.dark_mode, size: 18),
-                    ),
+                    ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode, size: 18)),
+                    ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto, size: 18)),
+                    ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode, size: 18)),
                   ],
                   selected: {themeProvider.themeMode},
-                  onSelectionChanged: (modes) {
-                    themeProvider.setThemeMode(modes.first);
-                  },
-                  style: const ButtonStyle(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
+                  onSelectionChanged: (modes) => themeProvider.setThemeMode(modes.first),
+                  style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                 ),
               ),
 
@@ -88,7 +76,7 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Reference pitch (A4)',
                 subtitle: '${tuner.referencePitch.toStringAsFixed(1)} Hz',
                 colorScheme: colorScheme,
-                onTap: () => _showReferencePitchDialog(context, tuner),
+                onTap: () => _showReferencePitchDialog(context, tuner, instrument),
               ),
 
               const SizedBox(height: 32),
@@ -107,7 +95,6 @@ class SettingsScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // Footer
               Center(
                 child: Column(
                   children: [
@@ -121,14 +108,14 @@ class SettingsScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Image.asset(
-                          'assets/images/icon_violin_head.png',
+                          instrument.iconAsset,
                           color: const Color(0xFFDCE0E8),
                         ),
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Violin Tuner',
+                      'Tuner',
                       style: TextStyle(
                         color: colorScheme.onSurface,
                         fontSize: 15,
@@ -137,7 +124,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'v1.1.0',
+                      'v1.2.0',
                       style: TextStyle(
                         color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                         fontSize: 13,
@@ -154,10 +141,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showReferencePitchDialog(BuildContext context, TunerService tuner) {
+  void _showReferencePitchDialog(
+      BuildContext context, TunerService tuner, InstrumentService instrument) {
     showDialog(
       context: context,
-      builder: (ctx) => _ReferencePitchDialog(tuner: tuner),
+      builder: (ctx) => _ReferencePitchDialog(tuner: tuner, instrument: instrument),
     );
   }
 }
@@ -166,7 +154,8 @@ class SettingsScreen extends StatelessWidget {
 
 class _ReferencePitchDialog extends StatefulWidget {
   final TunerService tuner;
-  const _ReferencePitchDialog({required this.tuner});
+  final InstrumentService instrument;
+  const _ReferencePitchDialog({required this.tuner, required this.instrument});
 
   @override
   State<_ReferencePitchDialog> createState() => _ReferencePitchDialogState();
@@ -174,31 +163,17 @@ class _ReferencePitchDialog extends StatefulWidget {
 
 class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
   late double _a4Hz;
-  late Map<TunerString, TextEditingController> _controllers;
-
-  // Standard frequencies at A4=440
-  static const Map<TunerString, double> _baseFreqs = {
-    TunerString.g3: 196.00,
-    TunerString.d4: 293.66,
-    TunerString.a4: 440.00,
-    TunerString.e5: 659.25,
-  };
-
-  static const Map<TunerString, String> _stringLabels = {
-    TunerString.g3: 'G₃',
-    TunerString.d4: 'D₄',
-    TunerString.a4: 'A₄',
-    TunerString.e5: 'E₅',
-  };
+  late Map<String, TextEditingController> _controllers;
 
   @override
   void initState() {
     super.initState();
     _a4Hz = widget.tuner.referencePitch;
     _controllers = {
-      for (final s in TunerString.values)
-        s: TextEditingController(
-          text: widget.tuner.getEffectiveStringFrequency(s).toStringAsFixed(2),
+      for (final s in widget.instrument.strings)
+        s.id: TextEditingController(
+          text: widget.tuner.getEffectiveStringFrequency(widget.instrument, s.id)
+              .toStringAsFixed(2),
         ),
     };
   }
@@ -213,9 +188,9 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
     setState(() {
       _a4Hz = hz;
       final ratio = hz / 440.0;
-      for (final s in TunerString.values) {
-        if (!widget.tuner.customStringFrequencies.containsKey(s)) {
-          _controllers[s]!.text = (_baseFreqs[s]! * ratio).toStringAsFixed(2);
+      for (final s in widget.instrument.strings) {
+        if (!widget.tuner.customStringFrequencies.containsKey(s.id)) {
+          _controllers[s.id]!.text = (s.freq * ratio).toStringAsFixed(2);
         }
       }
     });
@@ -224,17 +199,16 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final strings = widget.instrument.strings;
 
     return AlertDialog(
       backgroundColor: colorScheme.surfaceContainerHigh,
-      title: Text('Reference Pitch',
-          style: TextStyle(color: colorScheme.onSurface)),
+      title: Text('Reference Pitch', style: TextStyle(color: colorScheme.onSurface)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // A4 slider
             Text(
               'A4 = ${_a4Hz.toStringAsFixed(1)} Hz',
               style: TextStyle(
@@ -251,7 +225,6 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
               label: '${_a4Hz.toStringAsFixed(1)} Hz',
               onChanged: _updateFromA4,
             ),
-            // Quick presets
             Wrap(
               spacing: 8,
               children: [415.3, 432.0, 440.0, 442.0, 443.0, 444.0, 466.2]
@@ -266,7 +239,7 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
             ),
             const SizedBox(height: 20),
             Text(
-              'String frequencies',
+              '${widget.instrument.displayName} note frequencies',
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant,
                 fontSize: 13,
@@ -274,15 +247,14 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
               ),
             ),
             const SizedBox(height: 8),
-            // Per-string frequency editors
-            ...TunerString.values.map((s) => Padding(
+            ...strings.map((s) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
                     children: [
                       SizedBox(
                         width: 36,
                         child: Text(
-                          _stringLabels[s]!,
+                          s.label,
                           style: TextStyle(
                             color: colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
@@ -292,35 +264,28 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
-                          controller: _controllers[s],
+                          controller: _controllers[s.id],
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: TextStyle(color: colorScheme.onSurface),
                           decoration: InputDecoration(
                             suffixText: 'Hz',
                             suffixStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             filled: true,
                             fillColor: colorScheme.surfaceContainerHighest,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Reset per-string to auto
                       IconButton(
-                        icon: Icon(Icons.refresh,
-                            size: 18, color: colorScheme.onSurfaceVariant),
+                        icon: Icon(Icons.refresh, size: 18, color: colorScheme.onSurfaceVariant),
                         tooltip: 'Reset to auto',
                         onPressed: () {
                           final ratio = _a4Hz / 440.0;
                           setState(() {
-                            _controllers[s]!.text =
-                                (_baseFreqs[s]! * ratio).toStringAsFixed(2);
+                            _controllers[s.id]!.text = (s.freq * ratio).toStringAsFixed(2);
                           });
-                          widget.tuner.customStringFrequencies.containsKey(s);
                         },
                       ),
                     ],
@@ -336,13 +301,11 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            // Save A4 reference
             await widget.tuner.setReferencePitch(_a4Hz);
-            // Save per-string frequencies
-            for (final s in TunerString.values) {
-              final val = double.tryParse(_controllers[s]!.text);
+            for (final s in strings) {
+              final val = double.tryParse(_controllers[s.id]!.text);
               if (val != null && val > 50 && val < 2000) {
-                await widget.tuner.setStringFrequency(s, val);
+                await widget.tuner.setStringFrequency(s.id, val);
               }
             }
             if (context.mounted) Navigator.pop(context);
@@ -354,12 +317,11 @@ class _ReferencePitchDialogState extends State<_ReferencePitchDialog> {
   }
 }
 
-// ── Section Header ────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String text;
   final ColorScheme colorScheme;
-
   const _SectionHeader(this.text, this.colorScheme);
 
   @override
@@ -375,8 +337,6 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-// ── Settings Tile ─────────────────────────────────────────────────────────────
 
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
@@ -405,23 +365,16 @@ class _SettingsTile extends StatelessWidget {
       ),
       child: ListTile(
         leading: Icon(icon, color: colorScheme.onSurfaceVariant),
-        title: Text(
-          title,
-          style: TextStyle(color: colorScheme.onSurface),
-        ),
+        title: Text(title, style: TextStyle(color: colorScheme.onSurface)),
         subtitle: subtitle != null
-            ? Text(subtitle!,
-                style: TextStyle(color: colorScheme.onSurfaceVariant))
+            ? Text(subtitle!, style: TextStyle(color: colorScheme.onSurfaceVariant))
             : null,
         trailing: trailing ??
             (onTap != null
-                ? Icon(Icons.chevron_right,
-                    color: colorScheme.onSurfaceVariant)
+                ? Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant)
                 : null),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'screens/main_screen.dart';
 import 'services/metronome_service.dart';
 import 'services/tuner_service.dart';
+import 'services/instrument_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => TunerService()),
         ChangeNotifierProvider(create: (_) => MetronomeService()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => InstrumentService()),
       ],
       child: const ViolinTunerApp(),
     ),
@@ -64,7 +66,7 @@ class ViolinTunerApp extends StatelessWidget {
             }
 
             return MaterialApp(
-              title: 'Violin Tuner',
+              title: 'Tuner',
               debugShowCheckedModeBanner: false,
               themeMode: themeProvider.themeMode,
               theme: ThemeData(
