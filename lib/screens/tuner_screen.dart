@@ -118,9 +118,10 @@ class _TunerScreenState extends State<TunerScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final strings = instrument.strings;
 
-    // Split strings: left 2, right 2
-    final leftStrings  = strings.length >= 2 ? strings.sublist(0, 2) : strings;
-    final rightStrings = strings.length >= 4 ? strings.sublist(2, 4) : <InstrumentString>[];
+    // Split strings: left half, right half (supports 4 or 6 strings)
+    final half = (strings.length / 2).ceil();
+    final leftStrings  = strings.sublist(0, half);
+    final rightStrings = strings.length > half ? strings.sublist(half) : <InstrumentString>[];
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
