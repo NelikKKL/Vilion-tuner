@@ -1,4 +1,4 @@
-# 🎻 Violin Tuner & Metronome
+# 🎻 Tuner & Metronome
 
 Flutter-приложение для настройки скрипки и метроном с реальным определением высоты звука.
 
